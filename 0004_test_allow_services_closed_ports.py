@@ -32,95 +32,92 @@ ssh.set_missing_host_key_policy(
 ssh.connect('198.18.34.1',
             username='root',
             password='root')
-nc = ""
-
 
 #parameters
 target_ip = "198.18.34.1"
 udp_param = "-u"
 listen_param = "-l"
 nc_ = "nc"
-nc_obd = "nc.netcat-openbsd "
-test_status = True
+
+def test_fail():
+    print "\nTEST FAILED"
+    sys.exit()
+
+#nonblocking netcat reading
+from fcntl import fcntl, F_GETFL, F_SETFL
+from os import O_NONBLOCK, read
 
 def processing(shell, nc):
     # send from laptop to target
     for d in range(len(send_data)):
-        # shell.send(send_data[d])
         nc.stdin.write(send_data[d])
         time.sleep(0.3)
-        reply = shell.recv(2024)
-        #print "ssh read: " + reply
+        try:
+            reply = shell.recv(2024)
+        except Exception:
+            continue
         str = send_data[d]
         str = str[:-1]
-        if str not in reply:
-            print "TEST FAILED"
-            sys.exit()
+        if str in reply:
+            test_fail()
 
     # send from target to laptop
     for d in range(len(send_data)):
         shell.send(send_data[d])
-        # nc.stdin.write(send_data[d])
         time.sleep(0.3)
-        # reply = shell.recv(2024)
-        reply = nc.stdout.readline()
-        #print "nc read: " + reply
+        reply = " "
+        try:
+            reply = read(nc.stdout.fileno(), 1024)
+        except OSError:
+            continue
         str = send_data[d]
         str = str[:-1]
-        if str not in reply:
-            print "TEST FAILED"
-            sys.exit()
+        if str in reply:
+            test_fail()
 
-
-#test all ports
-for i in range(1000):
-    #exec ssh command & subprocess
-    p = random.randrange(0, 60000, 100)
-    port = str(p)
-    print "Random port: " + port
-
-    #run for tcp protocol
-    print "Debug: " + nc_ + listen_param + port
+def netcating(ssh_nc, sub_nc):
     shell = ssh.invoke_shell()
-    print shell.recv(2024)
-    cmd = nc_ + " " + listen_param + " "+ port + '\n'
-    print "cmd: " + cmd
-    shell.send(cmd)
-    print "nc " + shell.recv(2024)
-
-    time.sleep(1)
-
-    print "Debug subproc: " + nc_ + " " + target_ip + " " + port
-    nc = subprocess.Popen([nc_, target_ip, port],
-                          stdout=subprocess.PIPE,
-                          stdin=subprocess.PIPE,
-                          stderr=subprocess.PIPE)
-
-    time.sleep(0.1)
-    processing(shell, nc)
-    nc.kill()
-    shell.close()
-
-    #run for udp port
-    shell = ssh.invoke_shell()
-    cmd = nc_ + ' -v ' + udp_param + " " + listen_param + " " +  port +"\n"
-    shell.send(cmd)
+    shell.settimeout(1)
+    shell.recv(2024)
+    shell.send(ssh_nc)
     shell.recv(2024)
 
     time.sleep(1)
 
-    print "Debug subproc: " + nc_ + udp_param + target_ip + port
-    cmd = [nc_, udp_param, target_ip, port]
-
-    nc = subprocess.Popen([nc_, udp_param, target_ip, port],
-                          stdin=subprocess.PIPE,
+    nc = subprocess.Popen(sub_nc,
                           stdout=subprocess.PIPE,
+                          stdin=subprocess.PIPE,
                           stderr=subprocess.PIPE)
 
-    time.sleep(0.1)
+    flags = fcntl(nc.stdout, F_GETFL)
+    fcntl(nc.stdout, F_SETFL, flags | O_NONBLOCK)
+
     processing(shell, nc)
     nc.kill()
     shell.close()
 
-print "TEST PASSED"
+
+#test all ports
+for i in range(100):
+    #exec ssh command & subprocess
+    p = random.randrange(0, 60000, 100)
+    port = str(p)
+    if port in open_ports:
+        continue
+
+    print "........processing........."
+
+    #run for tcp protocol
+    cmd_ssh = nc_ + " " + listen_param + " "+ port + '\n'
+    cmd_nc = [nc_, target_ip, port]
+
+    netcating(cmd_ssh, cmd_nc)
+
+    #run for udp protocol
+    cmd_ssh = nc_ + ' -v ' + udp_param + " " + listen_param + " " +  port +"\n"
+    cmd_nc = [nc_, udp_param, target_ip, port]
+
+    netcating(cmd_ssh, cmd_nc)
+
+print "\nTEST PASSED"
 sys.exit()
