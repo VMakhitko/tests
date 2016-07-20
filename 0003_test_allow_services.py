@@ -32,8 +32,6 @@ ssh.set_missing_host_key_policy(
 ssh.connect('198.18.34.1',
             username='root',
             password='root')
-nc = ""
-
 
 #parameters
 target_ip = "198.18.34.1"
@@ -71,7 +69,7 @@ def processing(shell, nc):
             print "TEST FAILED"
             sys.exit()
 
-def init_nc(ssh_nc, s_nc):
+def netcating(ssh_nc, s_nc):
     shell = ssh.invoke_shell()
     shell.send(ssh_nc)
     shell.recv(2024)
@@ -84,51 +82,26 @@ def init_nc(ssh_nc, s_nc):
                           stderr=subprocess.PIPE)
 
     processing(shell, nc)
+    shell.close()
+    nc.kill()
 
 
 
 #test all ports
 for i in range(len(services)):
+    print "........processing.........."
     #exec ssh command & subprocess
-    #TODO: replace by function init_nc
-    #left only commands
     if not services[i][1]:
-        shell = ssh.invoke_shell()
-        print shell.recv(2024)
-        cmd = nc_ + " " + listen_param + " "+ services[i][0] + '\n'
-        shell.send(cmd)
-        shell.recv(2024)
+        cmd_ssh = nc_ + " " + listen_param + " "+ services[i][0] + '\n'
+        cmd_sub = [nc_, target_ip, services[i][0]]
 
-        time.sleep(1)
-
-        nc = subprocess.Popen([nc_, target_ip, services[i][0]],
-                              stdout=subprocess.PIPE,
-                              stdin=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
-
-        time.sleep(0.1)
-        processing(shell, nc)
-        nc.kill()
-        shell.close()
+        netcating(cmd_ssh, cmd_sub)
 
     else:
-        shell = ssh.invoke_shell()
-        cmd = nc_ + ' -v ' + udp_param + " " + listen_param + " " +  services[i][0] +"\n"
-        shell.send(cmd)
-        shell.recv(2024)
+        cmd_ssh = nc_ + " -v " + udp_param + " " + listen_param + " " +  services[i][0] +"\n"
+        cmd_sub = [nc_, udp_param, target_ip, services[i][0]]
 
-        time.sleep(1)
-
-        cmd = [nc_, udp_param, target_ip, services[i][0]]
-
-        nc = subprocess.Popen([nc_, udp_param, target_ip, services[i][0]],
-                              stdin=subprocess.PIPE,
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
-
-        processing(shell, nc)
-        nc.kill()
-        shell.close()
+        netcating(cmd_ssh, cmd_sub)
 
 print "TEST PASSED"
 sys.exit()
