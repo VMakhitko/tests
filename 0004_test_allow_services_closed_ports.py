@@ -11,7 +11,7 @@ if sys.stdin.isatty():
     sys.excepthook = ctrl_c_exeption
 
 #Declaring open ports
-open_ports = {'50001',
+open_ports = {'50000',
               '50001',
               '50010',
               '50011',

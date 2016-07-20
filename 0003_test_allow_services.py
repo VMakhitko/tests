@@ -10,8 +10,8 @@ if sys.stdin.isatty():
     sys.excepthook = ctrl_c_exeption
 
 #Declaring services ports and protocol types
-services = [#['50001', 'u'],
-            #['50001', 'u'],
+services = [['50000', 'u'],
+            ['50001', 'u'],
             ['50010', 'u'],
             ['50011', 'u'],
             ['50012', 'u'],
