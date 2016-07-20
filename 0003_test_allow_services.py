@@ -1,7 +1,13 @@
 import paramiko
 import subprocess, sys
 import time
-import select
+
+#Clear exit on Ctrl+C
+def ctrl_c_exeption(type, value, tb):
+    if not issubclass(type, KeyboardInterrupt):
+        sys.__excepthook__(type, value, tb)
+if sys.stdin.isatty():
+    sys.excepthook = ctrl_c_exeption
 
 #Declaring services ports and protocol types
 services = [#['50001', 'u'],

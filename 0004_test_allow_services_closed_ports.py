@@ -3,6 +3,13 @@ import subprocess, sys
 import time
 import random
 
+#Clear exit on Ctrl+C
+def ctrl_c_exeption(type, value, tb):
+    if not issubclass(type, KeyboardInterrupt):
+        sys.__excepthook__(type, value, tb)
+if sys.stdin.isatty():
+    sys.excepthook = ctrl_c_exeption
+
 #Declaring open ports
 open_ports = {'50001',
               '50001',
