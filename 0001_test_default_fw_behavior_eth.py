@@ -102,7 +102,3 @@ if test_status:
 else:
     print 'TEST FAILED'
 
-#Clear
-#nc_process.kill()
-#serial.write('\x03')
-#serial.close()
