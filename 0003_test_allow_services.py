@@ -85,8 +85,6 @@ def netcating(ssh_nc, s_nc):
     shell.close()
     nc.kill()
 
-
-
 #test all ports
 for i in range(len(services)):
     print "........processing.........."
