@@ -32,6 +32,12 @@ nc_ = "nc"
 nc_obd = "nc.netcat-openbsd "
 test_status = True
 
+def test_fail(nc):
+    print "\nTEST FAILED"
+    ssh.close()
+    nc.kill()
+    sys.exit()
+
 def processing(shell, nc):
     # send from laptop to target
     for d in range(len(send_data)):
@@ -44,8 +50,7 @@ def processing(shell, nc):
         str = send_data[d]
         str = str[:-1]
         if str not in reply:
-            print "TEST FAILED"
-            sys.exit()
+            test_fail(nc)
 
     # send from target to laptop
     for d in range(len(send_data)):
@@ -55,8 +60,7 @@ def processing(shell, nc):
         str = send_data[d]
         str = str[:-1]
         if str not in reply:
-            print "TEST FAILED"
-            sys.exit()
+            test_fail(nc)
 
 def netcating(ssh_nc, s_nc):
     shell = ssh.invoke_shell()

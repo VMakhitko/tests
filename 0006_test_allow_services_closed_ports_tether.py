@@ -30,8 +30,10 @@ udp_param = "-u"
 listen_param = "-l"
 nc_ = "nc"
 
-def test_fail():
+def test_fail(nc):
     print "\nTEST FAILED"
+    ssh.close()
+    nc.kill()
     sys.exit()
 
 #nonblocking netcat reading
@@ -53,7 +55,7 @@ def processing(shell, nc):
         str = send_data[d]
         str = str[:-1]
         if str in reply:
-            test_fail()
+            test_fail(nc)
 
     # send from target to laptop
     for d in range(len(send_data)):
@@ -67,7 +69,7 @@ def processing(shell, nc):
         str = send_data[d]
         str = str[:-1]
         if str in reply:
-            test_fail()
+            test_fail(nc)
 
 def netcating(ssh_nc, sub_nc):
     shell = ssh.invoke_shell()
