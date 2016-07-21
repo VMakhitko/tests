@@ -1,16 +1,3 @@
-#This is a test for iptables default rules
-#
-#Set following rules on target
-#iptables -P INPUT DROP
-#iptables -P FORWARD DROP
-#iptables -P OUTPUT DROP
-
-#Run this script on host
-#Any data shouldn't goes through
-
-#Use nc.netcat-openbsd for setup netcat connection
-#Recipe: meta-networking/recipes-support/netcat/netcat-openbsd_1.105.bb
-
 import time
 import serial
 import sys
@@ -48,7 +35,7 @@ nc_process = None
 def init():
     try:
         s = serial.Serial(serial_device, baudrate=115200, timeout=1)
-        s.readlines() #just to move pointer
+        s.readlines() #move pointer
         s.write(serial_command)
     except serial.SerialException:
         print "SerialException: try sudo..."

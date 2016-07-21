@@ -13,15 +13,7 @@ if sys.stdin.isatty():
 #Declaring open ports
 open_ports = 53
 
-send_data = ["*^*open\n",
-        "*^*close\n",
-        "*^*back\n",
-        "*^*forward\n",
-        "*^*left\n",
-        "*^*right\n",
-        "*^*wrong\n",
-        "*^*R2D2\n",
-        "*^*42\n"]
+send_data = ["*^*R2D2\n", "*^*42\n"]
 
 #open ssh connection
 ssh = paramiko.SSHClient()
@@ -49,8 +41,11 @@ from os import O_NONBLOCK, read
 def processing(shell, nc):
     # send from laptop to target
     for d in range(len(send_data)):
-        nc.stdin.write(send_data[d])
-        time.sleep(0.3)
+        try:
+            nc.stdin.write(send_data[d])
+        except IOError:
+            continue
+        time.sleep(0.1)
         try:
             reply = shell.recv(2024)
         except Exception:
@@ -63,7 +58,7 @@ def processing(shell, nc):
     # send from target to laptop
     for d in range(len(send_data)):
         shell.send(send_data[d])
-        time.sleep(0.3)
+        time.sleep(0.1)
         reply = " "
         try:
             reply = read(nc.stdout.fileno(), 1024)
@@ -97,7 +92,7 @@ def netcating(ssh_nc, sub_nc):
 
 
 #test all ports
-for i in range(100):
+for i in range(10):
     #exec ssh command & subprocess
     p = random.randrange(0, 60000, 100)
     port = str(p)

@@ -21,15 +21,7 @@ open_ports = {'50000',
               '53',
               '53'}
 
-send_data = ["*^*open\n",
-        "*^*close\n",
-        "*^*back\n",
-        "*^*forward\n",
-        "*^*left\n",
-        "*^*right\n",
-        "*^*wrong\n",
-        "*^*R2D2\n",
-        "*^*42\n"]
+send_data = ["*^*R2D2\n", "*^*42\n"]
 
 #open ssh connection
 ssh = paramiko.SSHClient()

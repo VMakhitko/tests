@@ -13,15 +13,7 @@ if sys.stdin.isatty():
 services = [['53', 'u'],
             ['53', '']]
 
-send_data = ["*^*open\n",
-        "*^*close\n",
-        "*^*back\n",
-        "*^*forward\n",
-        "*^*left\n",
-        "*^*right\n",
-        "*^*wrong\n",
-        "*^*R2D2\n",
-        "*^*42\n"]
+send_data = ["*^*R2D2\n", "*^*42\n"]
 
 #open ssh connection
 ssh = paramiko.SSHClient()
@@ -43,11 +35,12 @@ test_status = True
 def processing(shell, nc):
     # send from laptop to target
     for d in range(len(send_data)):
-        # shell.send(send_data[d])
-        nc.stdin.write(send_data[d])
+        try:
+            nc.stdin.write(send_data[d])
+        except IOError:
+            continue
         time.sleep(0.3)
         reply = shell.recv(2024)
-        #print "ssh read: " + reply
         str = send_data[d]
         str = str[:-1]
         if str not in reply:
@@ -57,11 +50,8 @@ def processing(shell, nc):
     # send from target to laptop
     for d in range(len(send_data)):
         shell.send(send_data[d])
-        # nc.stdin.write(send_data[d])
         time.sleep(0.3)
-        # reply = shell.recv(2024)
         reply = nc.stdout.readline()
-        #print "nc read: " + reply
         str = send_data[d]
         str = str[:-1]
         if str not in reply:

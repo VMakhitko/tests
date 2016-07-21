@@ -50,11 +50,9 @@ test_status = True
 def processing(shell, nc):
     # send from laptop to target
     for d in range(len(send_data)):
-        # shell.send(send_data[d])
         nc.stdin.write(send_data[d])
         time.sleep(0.3)
         reply = shell.recv(2024)
-        #print "ssh read: " + reply
         str = send_data[d]
         str = str[:-1]
         if str not in reply:
@@ -64,11 +62,8 @@ def processing(shell, nc):
     # send from target to laptop
     for d in range(len(send_data)):
         shell.send(send_data[d])
-        # nc.stdin.write(send_data[d])
         time.sleep(0.3)
-        # reply = shell.recv(2024)
         reply = nc.stdout.readline()
-        #print "nc read: " + reply
         str = send_data[d]
         str = str[:-1]
         if str not in reply:

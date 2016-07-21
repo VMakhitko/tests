@@ -1,16 +1,3 @@
-#This is a test for iptables default rules
-#
-#Set following rules on target
-#iptables -P INPUT DROP
-#iptables -P FORWARD DROP
-#iptables -P OUTPUT DROP
-
-#Run this script on host
-#Any data shouldn't goes through
-
-#Use nc.netcat-openbsd for setup netcat connection
-#Recipe: meta-networking/recipes-support/netcat/netcat-openbsd_1.105.bb
-
 import time
 import serial
 import sys
