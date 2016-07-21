@@ -56,7 +56,6 @@ def processing(shell, nc):
         str = send_data[d]
         str = str[:-1]
         if str not in reply:
-            #TODO: close ssh & subprocess
             print "TEST FAILED"
             sys.exit()
 
