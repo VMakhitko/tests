@@ -1,0 +1,102 @@
+# nat rules
+*nat
+-F
+#-A PREROUTING -j LOG --log-prefix "PRE " --log-level 7
+#-A PREROUTING -p tcp --dport 21 -j DNAT --to-destination 10.0.3.2:50021
+COMMIT
+
+*filter
+-F
+# block specific port protocol ip
+#-A INPUT -p tcp --destination-port 59000 -j LOG --log-prefix "PORT_DENY " --log-level 7
+#-A INPUT -p udp -s 10.0.3.1 -d 10.0.3.2 --destination-port 59000 -j ACCEPT
+
+# TCP syn flood
+#-N SYNFLOOD
+#-A INPUT -p tcp --syn -j SYNFLOOD
+#-A SYNFLOOD -p tcp --syn -m limit  --limit 1/s -j RETURN
+#-A SYNFLOOD -p tcp --syn -j LOG --log-prefix "SYN FLOOD " --log-level 7
+#-A SYNFLOOD -j DROP
+#-A INPUT -p tcp --dport 59000 -s 10.0.3.1 -j ACCEPT
+
+# allow internal network by subnetwork of by interface and filter out a MAC
+#-A INPUT -s 10.0.3.1 -m mac --mac-source de:00:93:30:14:8c -j ACCEPT
+#-A INPUT -s 10.0.3.0/24 -j ACCEPT
+#-A INPUT -i ens3 -j ACCEPT
+
+# allow DNS
+#-A INPUT -p udp --destination-port 53 -i ens3 -s 10.0.3.0/24 -j ACCEPT 
+#-A INPUT -p tcp --destination-port 53 -i ens3 -s 10.0.3.0/24 -j ACCEPT 
+
+# forward port, execute echo '1' | sudo tee /proc/sys/net/ipv4/conf/ens3/forwarding
+#-A FORWARD  -p tcp -d 10.0.3.2 --dport 50021 -j ACCEPT
+# and finally accept forwarded port
+#-A INPUT -p tcp -d 10.0.3.2 --dport 50021 -j ACCEPT 
+
+# allow VPN
+#-A INPUT -p tcp --source-port 443 -j ACCEPT
+
+# Allow all protocols on interface "eth0"
+# nomadic device limitation 
+#-A INPUT -i ens3 -p udp --dport 53 -j ACCEPT
+#-A INPUT -i ens3 -p tcp --dport 53 -j ACCEPT
+
+# Nomadic devices filtering
+#-A INPUT -i ens3 -p udp --dport 80 -j ACCEPT
+
+# ip storm block
+#-A INPUT -i ens3 -p udp --dport 80 -m limit --limit 1/s -j ACCEPT
+
+# port handling for UDP and TCP
+#-A INPUT -p udp -d 10.0.3.1 --dport 50000 -j ACCEPT
+
+# allow ping from internal network
+#-A INPUT -s 10.0.3.0/24 -j ACCEPT
+#-A INPUT -i ens3 -p tcp --dport 50001 -j ACCEPT
+#-A INPUT -i ens3 -p udp --dport 50001 -j ACCEPT
+
+# statefull
+#-A INPUT -i ens3 -p tcp --dport 59000 -j ACCEPT
+#-A INPUT -i ens3 -p tcp --dport 59000 -m state --state NEW  -j ACCEPT
+
+# replay attack
+#-A INPUT -p tcp --dport 22 -m state --state ESTABLISHED,RELATED  -j ACCEPT
+
+
+# SIP allow 
+#-A INPUT -p tcp --sport 5060:5061 -j ACCEPT
+#-A INPUT -p udp --sport 10000:20000 -j ACCEPT
+
+# ICMP redirect log
+#-A INPUT -p icmp --icmp-type redirect -j LOG
+
+# ICMP rate limit
+#-A INPUT -p icmp -m icmp --icmp-type echo-request -m limit --limit 60/m --limit-burst 1 -j ACCEPT
+#-A INPUT -p icmp -j ACCEPT
+
+# ICMP fragmented
+#-A INPUT -m state --state INVALID -j LOG --log-prefix "FRAG " --log-level 7
+
+# block scanners
+#-A INPUT -m recent --name portscan --rcheck --seconds 20 -j DROP
+
+# port scan detection
+#-A INPUT -p tcp -m state --state NEW -m recent --set
+#-A INPUT -p tcp -m state --state NEW -m recent --update --seconds 6 --hitcount 2 -m recent --name portscan --set -j LOG --log-prefix "SCAN " --log-level 7
+#-A INPUT -p tcp -m state --state NEW -m recent --update --seconds 6 --hitcount 2 -j DROP
+
+# identify scaners
+#-A INPUT -p tcp -m tcp -m multiport --dports 80,443 -m recent --name portscan --set -j LOG --log-prefix "PORTS SCAN "
+
+# block spoofing
+#-A OUTPUT -s 10.0.3.0/24 -j DROP 
+#-A INPUT -i ens3 -s 10.0.3.0/24 -j LOG --log-prefix "INT on EXT" --log-level 7 
+
+# set deny as default policy for incoming and forwarding packets
+#-A INPUT -j LOG --log-prefix "IN DENY: " --log-level 7
+-P INPUT ACCEPT
+#-A FORWARD -j LOG --log-prefix "FW DENY: " --log-level 7
+-P FORWARD ACCEPT
+# set allow as default policy for outgoing packets
+-P OUTPUT ACCEPT
+COMMIT
