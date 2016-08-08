@@ -1,0 +1,82 @@
+#1. Remove all iptables rules
+iptables -F
+iptables -X
+
+#Loopback access
+iptables -t mangle -A PREROUTING -i lo -j ACCEPT
+iptables -t mangle -A POSTROUTING -o lo -j ACCEPT
+
+#Drop all invalid packets & IP spoofing
+iptables -t mangle -A PREROUTING -m state --state INVALID -m limit --limit 1/sec --limit-burst 1 -j LOG --log-level 7 --log-prefix "INVALID or spoofed packet"
+iptables -t mangle -A PREROUTING -m state --state INVALID -j DROP
+
+#
+
+#ICMP handling
+iptables -t mangle -A PREROUTING -i vcm0 -p icmp -j ACCEPT
+iptables -t mangle -A PREROUTING -p icmp -j DROP
+iptables -t mangle -A FORWARD -i vcm0 -o meth0 -p icmp -j ACCEPT
+iptables -t mangle -A FORWARD -p icmp -j DROP
+iptables -t mangle -A OUTPUT -p icmp -m icmp --icmp-type 11/1 -m limit --limit 1/sec --limit-burst 1 -j LOG --log-level 7 --log-prefix "ICMP  ttl-zero-during-reassembly"
+iptables -t mangle -A OUTPUT -p icmp -m icmp --icmp-type 11/1 -j DROP
+iptables -t mangle -A OUTPUT -p icmp -m icmp --icmp-type 12  -m limit --limit 1/sec --limit-burst 1 -j LOG --log-level 7 --log-prefix "ICMP Parameter problem"
+iptables -t mangle -A OUTPUT -p icmp -m icmp --icmp-type 12 -j DROP
+iptables -t mangle -A OUTPUT -p icmp -m limit 6/sec -j ACCEPT
+
+#SYN flood protection
+iptables -t mangle -N SYNFLOOD
+iptables -t mangle -A PREROUTING -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -j SYNFLOOD
+iptables -t mangle -A SYNFLOOD -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m limit --limit 1/sec --limit-burst 1 -j LOG --log-prefix "SYN FLOOD " --log-level 7
+iptables -t mangle -A SYNFLOOD -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -m limit --limit-burst 1 --limit 1/sec -j ACCEPT
+iptables -t mangle -A SYNFLOOD -j DROP
+
+
+#Port scan protection
+iptables -t mangle -A PREROUTING -p tcp -m tcp --tcp-flags FIN,SYN,RST,PSH,ACK,URG NONE -m limit --limit 1/sec --limit-burst 1 -j LOG --log-level 7 --log-prefix "Null scan"
+iptables -t mangle -A PREROUTING -p tcp -m tcp --tcp-flags FIN,SYN,RST,PSH,ACK,URG NONE -j DROP
+iptables -t mangle -N UDP_scan
+iptables -t mangle -N SCTP_scan
+iptables -t mangle -N INCOMMING
+iptables -t mangle -A PREROUTING -p udp -m state --state INVALID,NEW -j UDP_scan
+iptables -t mangle -A PREROUTING -p tcp -m state --state NEW,INVALID -j INCOMMING
+iptables -t mangle -A PREROUTING -p sctp --chunk-types any INIT,COOKIE_ECHO -j SCTP_scan
+iptables -t mangle -A UDP_scan -p udp -m recent --update --seconds 2 --name UDP-PORTSCAN -m limit --limit 1/sec --limit-burst 1 -j LOG --log-prefix "Firewall> Incoming UDP"
+iptables -t mangle -A UDP_scan -p udp -j DROP
+iptables -t mangle -A INCOMMING -p tcp -m state --state NEW -m limit --limit 1/sec --limit-burst 1 -j LOG --log-prefix "Firewall> Incoming connection"
+iptables -t mangle -A INCOMMING -j DROP
+iptables -t mangle -A SCTP_scan -p sctp -m recent --update --seconds 2 --name SCTP-PORTSCAN -m limit --limit 1/sec --limit-burst 1 -j LOG --log-prefix "Firewall> Incoming SCTP"
+iptables -t mangle -A SCTP_scan -p sctp -j DROP
+
+
+
+
+# Allow services ports
+iptables -A INPUT -i vcm0 -p udp -m udp --dport 50000:50001 -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -o vcm0 -p udp -m udp --sport 50000:50001 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+iptables -A INPUT -i vcm0 -p udp -m udp --dport 50010:50013 -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -o vcm0 -p udp -m udp --sport 50010:50013 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+iptables -A INPUT -i vcm0 -p tcp -m tcp --dport 13400 -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -o vcm0 -p tcp -m tcp --sport 13400 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+iptbales -A INPUT -i vcm0 -p tcp -m tcp --dport 445 -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -o vcm0 -p tcp -m tcp --sport 445 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+iptables -A INPUT -p tcp -m tcp --dport 53 -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -p tcp -m tcp  --sport 53 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+iptables -A INPUT -p udp -m udp --dport 53 -m state --state ESTABLISHED,RELATED -j ACCEP
+iptables -A OUTPUT -p udp -m udp --sport 53 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+#Sip traffic
+iptables -A INPUT -p tcp -m tcp --dport 5060:5061 -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -p tcp -m tcp --sport 5060:5061 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+iptables -A INPUT -p udp -m udp --dport 10000:20000 -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -p udp -m udp --sport 10000:20000 -m state --state NEW,ESTABLISHED,RELATED -j ACCEPT
+
+# Set default rules
+iptables -A INPUT -j DROP
+iptables -A FORWARD -j DROP
+iptables -A OUTPUT -j DROP
